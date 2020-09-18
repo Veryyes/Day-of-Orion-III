@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import logging
 from enum import Enum
@@ -14,6 +15,9 @@ LOGFILE="orion3.log"
 class State(Enum):
     QUIT = 1
     MAIN_MENU = 2
+    HOST = 3
+    CONNECT = 4
+    GAME = 5
 
 
 '''
@@ -24,6 +28,8 @@ Also holds predefined global thingies
 class Game:
     FPS = 30.0
     SPF = 1/FPS
+    world_size = (5, 5)
+    region_size = (2, 2)
 
     def __init__(self, screen):
         self.tick = 0
@@ -31,19 +37,41 @@ class Game:
         self.key_state = None
         self.state = State.MAIN_MENU
 
-        self.context = MainMenu.MainMenu(0, 0, screen.width, screen.height, screen)
-        
+        self.context = MainMenu.MainMenu(lambda s: 0, 
+                                        lambda s: 0, 
+                                        lambda s: s.width, 
+                                        lambda s: s.height, 
+                                        screen)
+
+    def set_context(self, context):
+        self.context = context
+
     def set_state(self, state):
         self.state = state
 
     def set_state_quit(self):
         self.state = State.QUIT
+    
+    def set_state_connect(self):
+        self.state = State.CONNECT
+
+    def set_state_host(self):
+        self.state = State.HOST
+
+    def set_state_game(self):
+        self.state = State.GAME
 
     def is_pressed(self, k, case_sensitive=False):
-        if case_sensitive:
-            return self.key_state == ord(k)
-        # Nasty way to capitalize letters if not already
-        return (self.key_state & ~32) == (ord(k) & ~32) 
+        if self.key_state == None:
+            return False
+        if type(k) != int:
+            if case_sensitive:
+                return self.key_state == ord(k)
+            # Nasty way to capitalize letters if not already
+            return (self.key_state & ~32) == (ord(k) & ~32)
+        else:
+            return self.key_state == k
+
 
     '''
     Did the user press enter? (13 => \r and 10 => \n)
@@ -60,12 +88,33 @@ def init(screen):
     # Set up Logging
     logging.basicConfig(filename=LOGFILE, level=logging.DEBUG)
     
+    
+    # Implementation of screen.has_resized differs on OS, behavior appears to be different too ....
+    def resized_fix(self):
+        re_sized = False
+        info = self._stdout.GetConsoleScreenBufferInfo()['Window']
+        width = info.Right - info.Left + 1
+        height = info.Bottom - info.Top + 1
+        if width != self._last_width or height != self._last_height:
+            re_sized = True
+            logging.debug("Resized: {} -> {}, {} -> {}".format(self._last_width, width, self._last_height, height))
+        self._last_width = width
+        self._last_height = height
+        return re_sized
+
+    if sys.platform == "win32":
+        screen.has_resized = resized_fix
+
     return game
 
 def loop(game, screen):
     if game.state == State.QUIT:
         game.running = False
-        
+
+    
+    if screen.has_resized(screen):
+        screen.clear()
+
     game.context.update(game, screen)
 
     screen.refresh()

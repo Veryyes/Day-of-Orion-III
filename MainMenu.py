@@ -1,5 +1,4 @@
 from random import randint
-from enum import Enum
 
 from asciimatics.screen import Screen
 from asciimatics.effects import Cycle, Stars
@@ -8,10 +7,11 @@ from asciimatics.scene import Scene
 
 from Pane import Pane
 from Main import State
+from ConnectMenu import ConnectMenu
 
 class MainMenu(Pane):
 	def __init__(self, x, y, w, h, screen):
-		super().__init__(x, y, w, h)
+		super().__init__(x, y, w, h, screen)
 		self.title = FigletText("Day of Orion III", font='big')
 		self.stars = [(randint(1, screen.width-1), randint(1, screen.height-1), randint(0,3)) for _ in range(70)]
 		self.star_animation = ['.','x','*','+']
@@ -43,6 +43,14 @@ class MainMenu(Pane):
 		screen.print_at("Press any Key to continue", int(screen.width/2.0 - 12.5), int(screen.height*.8))
 		
 		if game.any_pressed():
-			game.set_state_quit()
+			screen.clear()
+			game.set_state_connect()
+			game.set_context(ConnectMenu(
+				lambda s: int(s.width * .25),
+				lambda s: int(s.height * .075),
+				lambda s: int(s.width * .5),
+				lambda s: int(s.height * .85),
+				screen
+			))
 
 		super().update(screen)

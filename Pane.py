@@ -1,4 +1,7 @@
 from enum import Enum
+import sys
+
+import logging
 
 class Style(Enum):
     BOLD = 1
@@ -34,11 +37,16 @@ class Pos(Enum):
 This is a box/menu that will be actually rendered
 '''
 class Pane:
-    def __init__(self, x,y,w,h, text=""):
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
+    def __init__(self, x,y,w,h, screen, text=""):
+        self.x_expr = x
+        self.y_expr = y
+        self.w_expr = w
+        self.h_expr = h
+        self.screen = screen
+        self.x = self.x_expr(self.screen)
+        self.y = self.y_expr(self.screen)
+        self.w = self.w_expr(self.screen)
+        self.h = self.h_expr(self.screen)
         self.center_text = False
         self.text = []
         self.textAlign = (Pos.CENTER, Pos.CENTER)
@@ -143,9 +151,23 @@ class Pane:
                 y += 1
 
     def update(self, screen):
+        if screen.has_resized(screen):
+            logging.debug("{}->{}, {}->{}, {}->{}, {}->{}".format(
+                self.x, self.x_expr(screen),    
+                self.y, self.y_expr(screen),
+                self.w, self.w_expr(screen),
+                self.h, self.h_expr(screen)
+            ))            
+            self.x = self.x_expr(screen)
+            self.y = self.y_expr(screen)
+            self.w = self.w_expr(screen)
+            self.h = self.h_expr(screen)
+            self.updateStatic = True
+
         if self.updateStatic or self.alwaysRedraw:
             self.updateStatic = False
             self.draw_boarder(screen)
             self.draw_text(screen)
         for child in self.children:
+
             child.update(screen)
